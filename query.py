@@ -79,9 +79,29 @@ def select_all():
                 })
     return results
 
+def select_where(field, value):
+    page_count = lib.count_pages(b"heap.db")
+    results = []
+    for page_num in range(page_count):
+        page = lib.get_page(ctypes.byref(pool), b"heap.db", page_num)
+        for slot in range(ROWS_PER_PAGE):
+            row = page.contents.rows[slot]
+            if row.is_occupied == 1:
+                row_dict = {
+                    "id": row.id,
+                    "name": row.name.decode(),
+                    "age": row.age
+                }
+                if row_dict[field] == value:
+                    results.append(row_dict)
+    return results
+
 insert({"id": 1, "name": "Alice", "age": 30})
 insert({"id": 2, "name": "Bob", "age": 25})
 
 rows = select_all()
 for row in rows:
     print(row)
+
+print(select_where("name", "Alice"))
+print(select_where("id", 2))
