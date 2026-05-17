@@ -1,5 +1,5 @@
 #define PAGE_SIZE 4096
-#define ROW_SIZE 37
+#define ROW_SIZE 38
 #define ROWS_PER_PAGE (PAGE_SIZE / ROW_SIZE)
 #define BUFFER_SIZE 3
 
@@ -7,6 +7,7 @@
 #include <string.h>
 
 struct Row {
+    unsigned char is_occupied;
     unsigned int id;
     char name[32];
     unsigned char age;
@@ -50,9 +51,10 @@ void write_page(struct Page *page, const char *filepath, int page_number) {
 
 void read_page(struct Page *page, const char *filepath, int page_number) {
     FILE *file = fopen(filepath, "rb");
+    if (file == NULL) return;
     fseek(file, page_number * PAGE_SIZE, SEEK_SET);
     fread(page, PAGE_SIZE, 1, file);
-    fclose(file); 
+    fclose(file);
 }
 
 struct Row read_row(struct Page *page, int slot) {
@@ -84,6 +86,7 @@ struct Page *get_page(struct BufferPool *pool, const char *filepath, int page_nu
     }
     for (int i = 0; i < BUFFER_SIZE; i++) {
         if (pool->slots[i].is_used == 0) {
+            memset(&pool->pages[i], 0, PAGE_SIZE);
             read_page(&pool->pages[i], filepath, page_number);
             pool->slots[i].page_number = page_number;
             pool->slots[i].is_used = 1;

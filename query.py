@@ -1,17 +1,17 @@
 import ctypes
 
 lib = ctypes.CDLL("./libheap.dylib")
-print("library loaded")
 
 class Row(ctypes.Structure):
     _fields_ = [
+        ("is_occupied", ctypes.c_ubyte),
         ("id", ctypes.c_uint),
         ("name", ctypes.c_char * 32),
         ("age", ctypes.c_ubyte)
     ]
     _pack_ = 1
 
-ROWS_PER_PAGE = 4096 // 37
+ROWS_PER_PAGE = 4096 // 38
 
 class Page(ctypes.Structure):
     _fields_ = [
@@ -34,15 +34,54 @@ class BufferPool(ctypes.Structure):
 
 lib.init_buffer_pool.argtypes = [ctypes.POINTER(BufferPool)]
 lib.init_buffer_pool.restype = None
-
 lib.get_page.argtypes = [ctypes.POINTER(BufferPool), ctypes.c_char_p, ctypes.c_int]
 lib.get_page.restype = ctypes.POINTER(Page)
+lib.insert_row.argtypes = [ctypes.POINTER(Page), ctypes.c_int, Row]
+lib.insert_row.restype = None
+lib.write_page.argtypes = [ctypes.POINTER(Page), ctypes.c_char_p, ctypes.c_int]
+lib.write_page.restype = None
+lib.count_pages.argtypes = [ctypes.c_char_p]
+lib.count_pages.restype = ctypes.c_int
 
 pool = BufferPool()
 lib.init_buffer_pool(ctypes.byref(pool))
 
-p0 = lib.get_page(ctypes.byref(pool), b"heap.db", 0)
-print(f"id: {p0.contents.rows[0].id}, name: {p0.contents.rows[0].name}, age: {p0.contents.rows[0].age}")
+def insert(row_dict):
+    page_count = lib.count_pages(b"heap.db")
+    target_page = max(0, page_count - 1)
 
-p1 = lib.get_page(ctypes.byref(pool), b"heap.db", 1)
-print(f"id: {p1.contents.rows[0].id}, name: {p1.contents.rows[0].name}, age: {p1.contents.rows[0].age}")
+    row = Row()
+    row.is_occupied = 1
+    row.id = row_dict["id"]
+    row.name = row_dict["name"].encode()
+    row.age = row_dict["age"]
+
+    page = lib.get_page(ctypes.byref(pool), b"heap.db", target_page)
+
+    for slot in range(ROWS_PER_PAGE):
+        if page.contents.rows[slot].is_occupied == 0:
+            lib.insert_row(page, slot, row)
+            lib.write_page(page, b"heap.db", target_page)
+            return
+
+def select_all():
+    page_count = lib.count_pages(b"heap.db")
+    results = []
+    for page_num in range(page_count):
+        page = lib.get_page(ctypes.byref(pool), b"heap.db", page_num)
+        for slot in range(ROWS_PER_PAGE):
+            row = page.contents.rows[slot]
+            if row.is_occupied == 1:
+                results.append({
+                    "id": row.id,
+                    "name": row.name.decode(),
+                    "age": row.age
+                })
+    return results
+
+insert({"id": 1, "name": "Alice", "age": 30})
+insert({"id": 2, "name": "Bob", "age": 25})
+
+rows = select_all()
+for row in rows:
+    print(row)

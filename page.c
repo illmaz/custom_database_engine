@@ -1,11 +1,12 @@
 #define PAGE_SIZE 4096
-#define ROW_SIZE 37
+#define ROW_SIZE 38
 #define ROWS_PER_PAGE (PAGE_SIZE / ROW_SIZE)
 
 #include <stdio.h>
 #include <string.h>
 
 struct Row {
+    unsigned char is_occupied;
     unsigned int id;
     char name[32];
     unsigned char age;
