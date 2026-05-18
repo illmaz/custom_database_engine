@@ -115,16 +115,3 @@ def delete(field, value):
                     lib.delete_row(page, slot)
                     lib.write_page(page, b"heap.db", page_num)
                     return
-
-insert({"id": 1, "name": "Alice", "age": 30})
-insert({"id": 2, "name": "Bob", "age": 25})
-
-print("before delete:")
-for row in select_all():
-    print(row)
-
-delete("name", "Alice")
-
-print("after delete:")
-for row in select_all():
-    print(row)
