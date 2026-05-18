@@ -1,4 +1,4 @@
-from query import insert, select_all, select_where, delete
+from query import insert, select_all, select_where, delete, select_by_id
 
 def parse_value(value):
     try:
@@ -17,6 +17,7 @@ def run():
             print("commands:")
             print("  insert <id> <name> <age>")
             print("  select all")
+            print("  select id <id>")
             print("  select where <field> <value>")
             print("  delete <field> <value>")
             print("  exit")
@@ -48,6 +49,17 @@ def run():
                 else: 
                     for row in rows: 
                         print(row)
+
+        elif line.startswith("select id"):
+            parts = line.split()
+            if len(parts) !=3:
+                print("usage: select id <id>")
+            else:
+                row = select_by_id(int(parts[2]))
+                if row is None:
+                    print("no row found.")
+                else:
+                    print(row)
         
         elif line.startswith("delete"):
             parts = line.split()
