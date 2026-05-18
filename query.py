@@ -143,6 +143,18 @@ def delete(field, value):
                     lib.write_page(page, b"heap.db", page_num)
                     return
                 
+def _rebuild_index():
+    page_count = lib.count_pages(b"heap.db")
+    for page_num in range(page_count):
+        page = lib.get_page(ctypes.byref(pool), b"heap.db", page_num)
+        for slot in range(ROWS_PER_PAGE):
+            row = page.contents.rows[slot]
+            if row.is_occupied == 1:
+                index.insert(row.id, (page_num, slot))
+
+_rebuild_index()
+
+                
 if __name__ == "__main__":
     import os
     if os.path.exists("heap.db"):

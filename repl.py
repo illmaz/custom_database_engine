@@ -34,9 +34,12 @@ def run():
             parts = line.split()
             if len(parts) != 4:
                 print("usage: insert <id> <name> <age>")
-            else: 
-                insert({"id": int(parts[1]), "name": parts[2], "age": int(parts[3])})
-                print("inserted.")
+            else:
+                try: 
+                    insert({"id": int(parts[1]), "name": parts[2], "age": int(parts[3])})
+                    print("inserted.")
+                except ValueError:
+                    print("error: id and age must be numbers.")
         
         elif line.startswith("select where"):
             parts = line.split()
@@ -54,12 +57,14 @@ def run():
             parts = line.split()
             if len(parts) !=3:
                 print("usage: select id <id>")
-            else:
+            try:
                 row = select_by_id(int(parts[2]))
                 if row is None:
                     print("no row found.")
                 else:
                     print(row)
+            except ValueError:
+                print("error: id must be a number.")
         
         elif line.startswith("delete"):
             parts = line.split()

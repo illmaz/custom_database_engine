@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
+static int access_counter = 0;
+
 struct Row {
     unsigned char is_occupied;
     unsigned int id;
@@ -20,6 +22,7 @@ struct Page {
 struct BufferSlot {
     int page_number;
     int is_used;
+    int last_used;
 };
 
 struct BufferPool {
@@ -79,9 +82,9 @@ void init_buffer_pool(struct BufferPool *pool) {
 
 struct Page *get_page(struct BufferPool *pool, const char *filepath, int page_number) {
     for (int i = 0; i < BUFFER_SIZE; i++) {
-        if (pool ->slots[i].is_used && pool->slots[i].page_number == page_number) {
-            return &pool ->pages[i];
-        
+        if (pool->slots[i].is_used && pool->slots[i].page_number == page_number) {
+            pool->slots[i].last_used = ++access_counter;
+            return &pool->pages[i];
         }
     }
     for (int i = 0; i < BUFFER_SIZE; i++) {
@@ -90,12 +93,22 @@ struct Page *get_page(struct BufferPool *pool, const char *filepath, int page_nu
             read_page(&pool->pages[i], filepath, page_number);
             pool->slots[i].page_number = page_number;
             pool->slots[i].is_used = 1;
-            return &pool ->pages[i];
+            pool->slots[i].last_used = ++access_counter;
+            return &pool->pages[i];
         }
-
-    } 
-    return NULL;
-
+    }
+    int lru = 0;
+    for (int i = 1; i < BUFFER_SIZE; i++) {
+        if (pool->slots[i].last_used < pool->slots[lru].last_used) {
+            lru = i;
+        }
+    }
+    memset(&pool->pages[lru], 0, sizeof(struct Page));
+    read_page(&pool->pages[lru], filepath, page_number);
+    pool->slots[lru].page_number = page_number;
+    pool->slots[lru].is_used = 1;
+    pool->slots[lru].last_used = ++access_counter;
+    return &pool->pages[lru];
 }
 
 void delete_row(struct Page *page, int slot) {

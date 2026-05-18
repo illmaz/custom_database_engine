@@ -43,8 +43,22 @@ class TestEngine(unittest.TestCase):
     def setUp(self):
         if os.path.exists("heap.db"):
             os.remove("heap.db")
-        from query import pool, lib, BufferPool 
+        from query import pool, lib, BufferPool, index 
         lib.init_buffer_pool(ctypes.byref(pool))
+        index.root.keys = []
+        index.root.values = []
+        index.root.children = []
+        index.root.is_leaf = True
+
+    def test_select_by_id(self):
+        from query import select_by_id
+        insert({"id": 1, "name": "Alice", "age": 30})
+        insert({"id": 2, "name": "Bob", "age": 25})
+        row = select_by_id(1)
+        self.assertIsNotNone(row)
+        self.assertEqual(row["name"], "Alice")
+        row = select_by_id(9)
+        self.assertIsNone(row)
 
 if __name__ == "__main__":
     unittest.main()
