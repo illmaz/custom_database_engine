@@ -65,6 +65,11 @@ def insert(row_dict):
             lib.insert_row(page, slot, row)
             lib.write_page(page, b"heap.db", target_page)
             return
+    
+    new_page_num = lib.count_pages(b"heap.db")
+    new_page = lib.get_page(ctypes.byref(pool), b"heap.db", new_page_num)
+    lib.insert_row(new_page, 0, row)
+    lib.write_page(new_page, b"heap.db", new_page_num)
 
 def select_all():
     page_count = lib.count_pages(b"heap.db")
@@ -115,3 +120,5 @@ def delete(field, value):
                     lib.delete_row(page, slot)
                     lib.write_page(page, b"heap.db", page_num)
                     return
+
+
