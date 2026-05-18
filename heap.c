@@ -98,3 +98,7 @@ struct Page *get_page(struct BufferPool *pool, const char *filepath, int page_nu
 
 }
 
+void delete_row(struct Page *page, int slot) {
+    page->rows[slot].is_occupied = 0;
+}
+

@@ -42,6 +42,8 @@ lib.write_page.argtypes = [ctypes.POINTER(Page), ctypes.c_char_p, ctypes.c_int]
 lib.write_page.restype = None
 lib.count_pages.argtypes = [ctypes.c_char_p]
 lib.count_pages.restype = ctypes.c_int
+lib.delete_row.argtypes = [ctypes.POINTER(Page), ctypes.c_int]
+lib.delete_row.restype = None
 
 pool = BufferPool()
 lib.init_buffer_pool(ctypes.byref(pool))
@@ -96,12 +98,33 @@ def select_where(field, value):
                     results.append(row_dict)
     return results
 
+def delete(field, value):
+    page_count = lib.count_pages(b"heap.db")
+
+    for page_num in range(page_count):
+        page = lib.get_page(ctypes.byref(pool), b"heap.db", page_num)
+        for slot in range(ROWS_PER_PAGE):
+            row = page.contents.rows[slot]
+            if row.is_occupied == 1: 
+                row_dict = {
+                    "id": row.id,
+                    "name": row.name.decode(),
+                    "age": row.age
+                }
+                if row_dict[field] == value:
+                    lib.delete_row(page, slot)
+                    lib.write_page(page, b"heap.db", page_num)
+                    return
+
 insert({"id": 1, "name": "Alice", "age": 30})
 insert({"id": 2, "name": "Bob", "age": 25})
 
-rows = select_all()
-for row in rows:
+print("before delete:")
+for row in select_all():
     print(row)
 
-print(select_where("name", "Alice"))
-print(select_where("id", 2))
+delete("name", "Alice")
+
+print("after delete:")
+for row in select_all():
+    print(row)
