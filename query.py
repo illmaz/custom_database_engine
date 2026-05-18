@@ -48,6 +48,10 @@ lib.delete_row.restype = None
 pool = BufferPool()
 lib.init_buffer_pool(ctypes.byref(pool))
 
+from btree import BTree
+
+index = BTree(1)
+
 def insert(row_dict):
     page_count = lib.count_pages(b"heap.db")
     target_page = max(0, page_count - 1)
@@ -64,12 +68,14 @@ def insert(row_dict):
         if page.contents.rows[slot].is_occupied == 0:
             lib.insert_row(page, slot, row)
             lib.write_page(page, b"heap.db", target_page)
+            index.insert(row_dict["id"], (target_page, slot))
             return
     
     new_page_num = lib.count_pages(b"heap.db")
     new_page = lib.get_page(ctypes.byref(pool), b"heap.db", new_page_num)
     lib.insert_row(new_page, 0, row)
     lib.write_page(new_page, b"heap.db", new_page_num)
+    index.insert(row_dict["id"], (new_page_num, 0))
 
 def select_all():
     page_count = lib.count_pages(b"heap.db")
@@ -103,6 +109,22 @@ def select_where(field, value):
                     results.append(row_dict)
     return results
 
+def select_by_id(id):
+    result = index.root.search(id)
+    if result is None:
+        return None
+    idx = result.keys.index(id)
+    page_num, slot = result.values[idx]
+    page = lib.get_page(ctypes.byref(pool), b"heap.db", page_num)
+    row = page.contents.rows[slot]
+    if row.is_occupied == 0:
+        return None
+    return {
+        "id": row.id,
+        "name": row.name.decode(),
+        "age": row.age
+    }
+
 def delete(field, value):
     page_count = lib.count_pages(b"heap.db")
 
@@ -120,5 +142,17 @@ def delete(field, value):
                     lib.delete_row(page, slot)
                     lib.write_page(page, b"heap.db", page_num)
                     return
+                
+if __name__ == "__main__":
+    import os
+    if os.path.exists("heap.db"):
+        os.remove("heap.db")
+
+    insert({"id": 1, "name": "Alice", "age": 30})
+    insert({"id": 2, "name": "Bob", "age": 25})
+    insert({"id": 3, "name": "Charlie", "age": 28})
+
+    print("select_by_id(2):", select_by_id(2))
+    print("select_by_id(9):", select_by_id(9))
 
 
