@@ -44,7 +44,7 @@ FILE* open_or_create(const char *filepath) {
 void write_page(struct Page *page, const char *filepath, int page_number) {
     FILE *file = open_or_create(filepath);
     fseek(file, page_number * PAGE_SIZE, SEEK_SET);
-    fwrite(page, PAGE_SIZE, 1, file);
+    fwrite(page, sizeof(struct Page), 1, file);
     fclose(file);
 
 }
@@ -53,7 +53,7 @@ void read_page(struct Page *page, const char *filepath, int page_number) {
     FILE *file = fopen(filepath, "rb");
     if (file == NULL) return;
     fseek(file, page_number * PAGE_SIZE, SEEK_SET);
-    fread(page, PAGE_SIZE, 1, file);
+    fread(page, sizeof(struct Page), 1, file);
     fclose(file);
 }
 
@@ -67,7 +67,7 @@ int count_pages(const char *filepath) {
     fseek(file, 0, SEEK_END);
     long size = ftell(file);
     fclose(file);
-    return size / PAGE_SIZE; 
+    return size / sizeof(struct Page); 
 }
 
 void init_buffer_pool(struct BufferPool *pool) {
@@ -86,7 +86,7 @@ struct Page *get_page(struct BufferPool *pool, const char *filepath, int page_nu
     }
     for (int i = 0; i < BUFFER_SIZE; i++) {
         if (pool->slots[i].is_used == 0) {
-            memset(&pool->pages[i], 0, PAGE_SIZE);
+            memset(&pool->pages[i], 0, sizeof(struct Page));
             read_page(&pool->pages[i], filepath, page_number);
             pool->slots[i].page_number = page_number;
             pool->slots[i].is_used = 1;

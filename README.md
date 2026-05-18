@@ -20,8 +20,8 @@ Extends the page into a full heap file. Multiple pages stored back to back on di
 **Phase 4 — `heap.c` continued**
 Adds the buffer pool. `BufferPool` and `BufferSlot` structs, `init_buffer_pool`, and `get_page` — which checks memory first and only goes to disk on a cache miss.
 
-**Phase 5 — `query.py` and `repl.py`**
-Python query layer on top of the C engine. Loads `libheap.dylib` via `ctypes`, defines the structs in Python to match C, and exposes `insert`, `select_all`, `select_where`, and `delete`. Includes an interactive REPL and a test suite.
+**Phase 5 — `query.py`, `repl.py`, and `btree.py`**
+Python query layer on top of the C engine. Loads `libheap.dylib` via `ctypes`, defines the structs in Python to match C, and exposes `insert`, `select_all`, `select_where`, `select_by_id`, and `delete`. Includes a B-tree index for O(log n) id lookups, an interactive REPL, and a test suite.
 
 ## How to compile and run
 
@@ -60,6 +60,9 @@ select_all()
 select_where("name", "Alice")
 # [{'id': 1, 'name': 'Alice', 'age': 30}]
 
+select_by_id(2)
+# {'id': 2, 'name': 'Bob', 'age': 25}
+
 delete("name", "Alice")
 select_all()
 # [{'id': 2, 'name': 'Bob', 'age': 25}]
@@ -67,22 +70,27 @@ select_all()
 
 ## Example — REPL
 
-insert 1 Alice 30
+```
+> insert 1 Alice 30
 inserted.
-insert 2 Bob 25
+> insert 2 Bob 25
 inserted.
-select all
+> select all
 {'id': 1, 'name': 'Alice', 'age': 30}
 {'id': 2, 'name': 'Bob', 'age': 25}
-select where name Alice
+> select id 2
+{'id': 2, 'name': 'Bob', 'age': 25}
+> select where name Alice
 {'id': 1, 'name': 'Alice', 'age': 30}
-delete name Alice
+> delete name Alice
 deleted.
-select all
+> select all
 {'id': 2, 'name': 'Bob', 'age': 25}
+```
 
 ## Known limitations
 
 - Buffer pool holds 3 pages — no eviction when full
-- No index — `select_where` does a full scan
+- B-tree index lives in memory only — does not persist to disk between sessions
+- `select_where` on non-id fields still does a full scan
 - Single process only, no concurrency

@@ -6,9 +6,6 @@ from query import insert, select_all, select_where, delete
 
 class TestEngine(unittest.TestCase):
 
-    def setUp(self):
-        if os.path.exists("heap.db"):
-            os.remove("heap.db")
 
     def test_insert_and_select_all(self):
         insert({"id": 1, "name": "Alice", "age": 30})
