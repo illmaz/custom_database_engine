@@ -1,9 +1,17 @@
 import os
 import time
+import ctypes
 from query import insert, select_where, select_by_id
 
 if os.path.exists("heap.db"):
     os.remove("heap.db")
+
+from query import index, pool, lib
+index.root.keys = []
+index.root.values = []
+index.root.children = []
+index.root.is_leaf = True
+lib.init_buffer_pool(ctypes.byref(pool))
 
 print("inserting 500 rows...")
 for i in range(1, 501):

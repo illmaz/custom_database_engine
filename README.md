@@ -18,7 +18,7 @@ C implementation of a single page with fixed-size rows. Introduces the `Row` and
 Extends the page into a full heap file. Multiple pages stored back to back on disk. Adds `open_or_create`, page-number-aware `write_page` and `read_page`, and `count_pages`.
 
 **Phase 4 — `heap.c` continued**
-Adds the buffer pool. `BufferPool` and `BufferSlot` structs, `init_buffer_pool`, and `get_page` — which checks memory first and only goes to disk on a cache miss.
+Adds the buffer pool. `BufferPool` and `BufferSlot` structs, `init_buffer_pool`, and `get_page` — which checks memory first and only goes to disk on a cache miss. Uses LRU eviction when all slots are full.
 
 **Phase 5 — `query.py`, `repl.py`, and `btree.py`**
 Python query layer on top of the C engine. Loads `libheap.dylib` via `ctypes`, defines the structs in Python to match C, and exposes `insert`, `select_all`, `select_where`, `select_by_id`, and `delete`. Includes a B-tree index for O(log n) id lookups, an interactive REPL, and a test suite.
@@ -47,6 +47,22 @@ python3 repl.py
 ```bash
 python3 test_query.py
 ```
+
+**Benchmark**
+```bash
+gcc -shared -fPIC -o libheap.dylib heap.c
+python3 benchmark.py
+```
+
+## Benchmark
+
+500 rows, looking up id=499 (worst case for a full scan), averaged over 100 runs.
+
+`select_where("id", 499)` — full scan, O(n) — 0.213 ms
+
+`select_by_id(499)` — B-tree index, O(log n) — 0.003 ms
+
+**81.7x faster** with the B-tree index.
 
 ## Example — Python
 
@@ -90,7 +106,8 @@ deleted.
 
 ## Known limitations
 
-- Buffer pool holds 3 pages — no eviction when full
-- B-tree index lives in memory only — does not persist to disk between sessions
+- B-tree index lives in memory only — does not persist to disk between sessions, rebuilt on startup by scanning the heap
+- `delete` does not remove entries from the B-tree index — stale entries accumulate but `select_by_id` handles them correctly by checking `is_occupied`
+- `delete` only removes the first matching row
 - `select_where` on non-id fields still does a full scan
 - Single process only, no concurrency
